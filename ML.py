@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy.signal import stft
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
@@ -24,6 +24,7 @@ class ECGClassifier:
             "Normal (NORM)": ["NORM"]
         }
         self.le = LabelEncoder()
+        self.scaler = StandardScaler()
         self.X, self.y = None, None
         self.X_train, self.X_test, self.y_train, self.y_test = None, None, None, None
 
@@ -81,6 +82,10 @@ class ECGClassifier:
             self.X, self.y, test_size=0.2, random_state=42, stratify=self.y
         )
 
+        # Standardize features for SVM, KNN, and optionally KMeans
+        self.X_train = self.scaler.fit_transform(self.X_train)
+        self.X_test = self.scaler.transform(self.X_test)
+
     def train_random_forest(self):
         print("\n=== Random Forest ===")
         clf_rf = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -104,9 +109,11 @@ class ECGClassifier:
 
     def run_kmeans_clustering(self):
         print("\n=== K-Means Clustering ===")
+        # Optional: use scaled data for KMeans
+        X_scaled = self.scaler.transform(self.X)
         num_classes = len(np.unique(self.y))
-        kmeans = KMeans(n_clusters=num_classes, random_state=42)
-        cluster_labels = kmeans.fit_predict(self.X)
+        kmeans = KMeans(n_clusters=num_classes, random_state=42, n_init=10)
+        cluster_labels = kmeans.fit_predict(X_scaled)
         ari = adjusted_rand_score(self.y, cluster_labels)
         print(f"Adjusted Rand Index (K-Means vs true labels): {ari:.3f}")
 
